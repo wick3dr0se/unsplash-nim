@@ -10,13 +10,13 @@ var img: Image
 proc newUnsplashClient*(): AsyncHttpClient =
   return newAsyncHttpClient()
 
-proc unsplashRequest(client: AsyncHttpClient, endpoint: string): Future[string] {.async.} =
+proc unsplashRequest*(client: AsyncHttpClient, endpoint: string): Future[string] {.async.} =
   let
     response = await client.get(url & endpoint)
     headers = response.headers
     format = split(headers.getOrDefault("Content-Type"), "/")
   
-  img.extension = format[0]
+  img.extension = format[1]
 
   return await response.body
 
@@ -28,6 +28,9 @@ proc saveImage*(content: string, filename: string, extension = img.extension) =
 
 proc dailyImage*(client: AsyncHttpClient): Future[string] {.async.} =
   return await client.unsplashRequest("daily")
+
+proc weeklyImage*(client: AsyncHttpClient): Future[string] {.async.} =
+  return await client.unsplashRequest("weekly")
 
 proc randomImage*(client: AsyncHttpClient, queries: seq[string] = @[]): Future[string] {.async.} =
   let query = queries.join(",")
