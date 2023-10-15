@@ -1,27 +1,44 @@
-import os, httpclient, asyncdispatch, json, strutils, strformat
+import httpclient, asyncdispatch, strutils
 
-let apiKey = getEnv("UNSPLASH_KEY")
+type Image = object
+  extension: string
 
-const api = "https://api.unsplash.com/"
+const url = "https://source.unsplash.com/"
+
+var img: Image
 
 proc newUnsplashClient*(): AsyncHttpClient =
-  return newAsyncHttpClient(
-    headers = newHttpHeaders({
-      "Accept-Version": "v1",
-      "Authorization": "Client-ID " & apiKey
-    })
-  )
+  return newAsyncHttpClient()
 
-proc randomImage*(client: AsyncHttpClient, queries: seq[string] = @[], count = 1, format = "raw"): Future[seq[string]] {.async.} =
-  var links: seq[string]
-
+proc unsplashRequest*(client: AsyncHttpClient, endpoint: string): Future[string] {.async.} =
   let
-    query = queries.join(",")
-    url = api & fmt"photos/random?count={count}&query={query}"
-    response = await client.getContent(url)
-    jsonResponse = parseJson(response)
+    response = await client.get(url & endpoint)
+    headers = response.headers
+    format = split(headers.getOrDefault("Content-Type"), "/")
+  
+  img.extension = format[1]
 
-  for image in jsonResponse:
-    links.add(image["urls"][format].getStr())
+  return await response.body
 
-  return links
+proc saveImage*(content: string, filename: string, extension = img.extension) =
+  if extension.startsWith("."):
+    writeFile(filename & extension, content)
+  else:
+    writeFile(filename & "." & extension, content)
+
+proc dailyImage*(client: AsyncHttpClient): Future[string] {.async.} =
+  return await client.unsplashRequest("daily")
+
+proc weeklyImage*(client: AsyncHttpClient): Future[string] {.async.} =
+  return await client.unsplashRequest("weekly")
+
+proc randomImage*(client: AsyncHttpClient, queries: seq[string] = @[]): Future[string] {.async.} =
+  let query = queries.join(",")
+
+  return await client.unsplashRequest("random?" & query)
+
+proc randomCategoryImage*(client: AsyncHttpClient, category: string): Future[string] {.async.} =
+  return await client.unsplashRequest("category/" & category)
+
+proc randomSizeImage*(client: AsyncHttpClient, size = "800x600"): Future[string] {.async.} =
+  return await client.unsplashRequest(size)
