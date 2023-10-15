@@ -1,4 +1,4 @@
-import os, httpclient, asyncdispatch, json, strutils, strformat
+import os, httpclient, asyncdispatch, json, strutils
 
 let apiKey = getEnv("UNSPLASH_KEY")
 
@@ -12,16 +12,37 @@ proc newUnsplashClient*(): AsyncHttpClient =
     })
   )
 
-proc randomImage*(client: AsyncHttpClient, queries: seq[string] = @[], count = 1, format = "raw"): Future[seq[string]] {.async.} =
-  var links: seq[string]
-
+proc unsplashGET(client: AsyncHttpClient, endpoint: string): Future[JsonNode] {.async.} =
   let
-    query = queries.join(",")
-    url = api & fmt"photos/random?count={count}&query={query}"
+    url = api & endpoint
     response = await client.getContent(url)
     jsonResponse = parseJson(response)
 
-  for image in jsonResponse:
-    links.add(image["urls"][format].getStr())
+  return jsonResponse
+
+proc photoById*(client: AsyncHttpClient, id: string, format = "raw"): Future[string] {.async.} =
+  let photo = await client.unsplashGET("photos/:" & id)
+
+  return photo["urls"][format].getStr()
+
+proc listPhotos*(client: AsyncHttpClient, format = "raw"): Future[seq[string]] {.async.} =
+  var links: seq[string]
+  let photos = await client.unsplashGET("photos")
+
+  for photo in photos:
+    links.add(photo["urls"][format].getStr())
+
+  return links
+
+
+proc randomPhoto*(client: AsyncHttpClient, queries: seq[string] = @[], count = 1, format = "raw"): Future[seq[string]] {.async.} =
+  var links: seq[string]
+  let
+    count = "?count=" & $count
+    query = "&query=" & queries.join(",")
+    photos = await client.unsplashGET("photos/random" & count & query)
+
+  for photo in photos:
+    links.add(photo["urls"][format].getStr())
 
   return links
