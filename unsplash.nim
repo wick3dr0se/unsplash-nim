@@ -1,10 +1,8 @@
-import os, httpclient, asyncdispatch, json, strutils
-
-let apiKey = getEnv("UNSPLASH_KEY")
+import httpclient, asyncdispatch, json, strutils
 
 const api = "https://api.unsplash.com/"
 
-proc newUnsplashClient*(): AsyncHttpClient =
+proc newUnsplashClient*(apiKey: string): AsyncHttpClient =
   return newAsyncHttpClient(
     headers = newHttpHeaders({
       "Accept-Version": "v1",

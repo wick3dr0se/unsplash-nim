@@ -1,7 +1,9 @@
-import asyncdispatch
+import os, asyncdispatch
 import ./unsplash
 
-var api = newUnsplashClient()
+let apiKey = getEnv("UNSPLASH_KEY")
+
+var api = newUnsplashClient(apiKey)
 
 # get link to photo specified by id
 #echo waitFor api.photoById("random_id123")
